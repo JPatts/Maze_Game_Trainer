@@ -29,7 +29,7 @@ def run_training(num_episodes, render=False):
         )
         pygame.display.set_caption("Training – Q‑Learning Zombie")
         clock = pygame.time.Clock()
-        FPS = 8  # speed adjustable
+        FPS = 40  # speed adjustable
 
     print(f"Training for {num_episodes} episodes...")
     for ep in range(num_episodes):
