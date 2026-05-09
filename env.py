@@ -77,7 +77,7 @@ class Environment:
             center = cell_center(self.zombie_start)
             pygame.draw.circle(screen, (255, 0, 0), center, cell_size // 3)
 
-    # ---------- Wall validation (moved here so every component can use it) ----------
+    # wall logic
     def is_valid_move(self, from_row, from_col, to_row, to_col):
         """Return True if moving from (from_row,from_col) to (to_row,to_col) is legal."""
         if not (0 <= to_row < self.rows and 0 <= to_col < self.cols):
@@ -167,8 +167,8 @@ class MazeGame:
         """ Returns a compact state representation """
         return {
             'zombie_row': self.zombie_pos[0],
-            'zombie_row': self.zombie_pos[0],
-            'player_col': self.player_pos[1],
+            'zombie_col': self.zombie_pos[1],
+            'player_row': self.player_pos[0],
             'player_col': self.player_pos[1],
             'keys_collected': sum(self.keys_collected),
         }
