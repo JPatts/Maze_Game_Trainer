@@ -76,7 +76,7 @@ class Environment:
         if self.zombie_start:
             center = cell_center(self.zombie_start)
             pygame.draw.circle(screen, (255, 0, 0), center, cell_size // 3)
-
+    
     # wall logic
     def is_valid_move(self, from_row, from_col, to_row, to_col):
         """Return True if moving from (from_row,from_col) to (to_row,to_col) is legal."""
@@ -97,6 +97,9 @@ class Environment:
             return not walls[1]
         return False
     
+    def door_position_as_tuple(self):
+        # returns door pos as (row,col) tuple
+        return (self.door_position['row'], self.door_position['col'])
 class MazeGame:
     def __init__(self, env):
         """

@@ -15,7 +15,7 @@ def run_training(num_episodes, render=False):
 
     # Inject human behaviour into the game step
     game._human_choose_action = lambda: human.choose_action(
-        game.player_pos, game.key_positions, game.keys_collected
+        game.player_pos, game.key_positions, game.keys_collected, game.zombie_pos
     )
 
     agent = QLearningAgent()
@@ -29,7 +29,7 @@ def run_training(num_episodes, render=False):
         )
         pygame.display.set_caption("Training – Q‑Learning Zombie")
         clock = pygame.time.Clock()
-        FPS = 40  # speed adjustable
+        FPS = 10  # speed adjustable
 
     print(f"Training for {num_episodes} episodes...")
     for ep in range(num_episodes):
