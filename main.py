@@ -149,7 +149,7 @@ def cmd_train(episodes, render, start_file):
     folder = new_session_folder()
     new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
     save_path = os.path.join(folder,new_filename)
-    agent.save(save_path, agent.total_episodes)
+    agent.save(save_path)
     print(f"Training complete. Saved to {save_path}")
 
 def cmd_play(filename):
