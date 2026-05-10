@@ -40,10 +40,10 @@ class QLearningAgent:
 
         # wall detection - which direction are blocked
         walls = (
-            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row - 1, zombie_col),
-            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col + 1),
-            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row + 1, zombie_col),
-            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col - 1),
+            not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row - 1, zombie_col),
+            not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col + 1),
+            not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row + 1, zombie_col),
+            not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col - 1),
         )
 
         return (dir_row, dir_col, dist_bin, walls, state['keys_collected'])

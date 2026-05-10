@@ -172,6 +172,7 @@ class MazeGame:
             'player_row': self.player_pos[0],
             'player_col': self.player_pos[1],
             'keys_collected': sum(self.keys_collected),
+            'env': self.env,
         }
     
     def _move(self, pos, action):
