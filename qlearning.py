@@ -57,10 +57,11 @@ class QLearningAgent:
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
-    def save(self, filename):
+    def save(self, filepath, episodes_trained):
         data = {
             'q_table': self.q_table,
-            'total_episodes': self.total_episodes
+            'epsilon': self.epsilon,
+            'episodes_trained': episodes_trained
         }
         with open(filename, 'wb') as f:
             pickle.dump(data, f)
@@ -72,8 +73,8 @@ class QLearningAgent:
         # New format: {'q_table': ..., 'total_episodes': ...}
         if isinstance(data, dict) and 'q_table' in data:
             self.q_table = data['q_table']
-            self.total_episodes = data.get('total_episodes', 0)
+            return data['qtable'], data['epsilon'], data['episodes_trained']
         else:
             # Old format: just the raw Q-table dictionary
             self.q_table = data
-            self.total_episodes = 0  # unknown, start counting from here
+            return data, 1.0, 0

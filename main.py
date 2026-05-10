@@ -1,10 +1,11 @@
+import os
 import sys
 import json
 import pygame
 from env import Environment, MazeGame
 from sim_human import SimHuman
 from qlearning import QLearningAgent
-
+from datetime import datetime
 
 def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze"):
     """
