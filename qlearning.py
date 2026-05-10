@@ -20,7 +20,7 @@ class QLearningAgent:
         # Direction quadrant 
         dir_row = (1 if drow > 0 else (-1 if drow < 0 else 0))
         dir_col = (1 if dcol > 0 else (-1 if dcol < 0 else 0))
-        return (dir_row, dir_col, dist_bin, state['key_collected'])
+        return (dir_row, dir_col, dist_bin, state['keys_collected'])
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
