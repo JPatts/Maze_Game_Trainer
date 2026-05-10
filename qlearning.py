@@ -23,20 +23,6 @@ class QLearningAgent:
         
         zombie_row = state['zombie_row']
         zombie_col = state['zombie_col']
-        player_row = state['player_row']
-        player_col = state['player_col']
-
-        # relative position
-        drow = player_row - zombie_row
-        dcol = player_col - zombie_col
-        manhattan = abs(drow) + abs(dcol)
-
-        # Diescretize distance into bins
-        dist_bin = min(manhattan // 2, 8)
-    
-        # Direction quadrant indicators
-        dir_row = (1 if drow > 0 else (-1 if drow < 0 else 0))
-        dir_col = (1 if dcol > 0 else (-1 if dcol < 0 else 0))
 
         # wall detection - which direction are blocked
         walls = (
@@ -46,7 +32,7 @@ class QLearningAgent:
             not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col - 1),
         )
 
-        return (dir_row, dir_col, dist_bin, walls, state['keys_collected'])
+        return (zombie_row, zombie_col, walls, state['keys_collected'])
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
