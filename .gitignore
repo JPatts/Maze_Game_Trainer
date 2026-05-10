@@ -1,0 +1,8 @@
+# Python bytecode cache
+__pycahce__/
+*.pyc
+*.pyo
+
+# Saved q Table files and trainin session folders
+*.pkl
+qtable_session_*/
