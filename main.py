@@ -7,17 +7,21 @@ from sim_human import SimHuman
 from qlearning import QLearningAgent
 from datetime import datetime
 
+def new_session_folder():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder = f"qtable_session_{timestamp}"
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
 def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze"):
     """
     Run one or more episodes using the given agent.
     Returns after all episodes finish. Does NOT save the agent.
     """
-    # Set up the environment and simulated human once
     env = Environment('maze_layout.json')
     game = MazeGame(env)
     human = SimHuman(env)
 
-    # Connect human to the game
     game._human_choose_action = lambda: human.choose_action(
         game.player_pos, game.key_positions, game.keys_collected, game.zombie_pos
     )
@@ -42,7 +46,6 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
         step_count = 0
 
         while not done:
-            # --- Optional rendering ---
             if render:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -110,44 +113,71 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
                   f"Epsilon: {agent.epsilon:.3f}  Steps: {step_count}   "
                   f"Zombie wins: {block_wins}/100")
             block_wins = 0
+
+    agent.total_episodes += num_episodes
             
     if render:
         pygame.quit()
 
 def cmd_create():
     agent = QLearningAgent()
-    agent.save("qtable_zombie_init.pkl")
-    print("Created fresh qtable_zombie_init.pkl.")
+    folder = new_session_folder()
+    path = os.path.join(folder, "qtable_zombie_init.pkl")
+    agent.save(path)
+    print(f"Created fresh {path}")
 
-def cmd_train(episodes, render):
+def cmd_train(episodes, render, start_file):
+    """
+    If start file is given, load that agent; otherwise start fresh
+    After training, save the agent into a NEW timestamped folder.
+    Using the cumulative episode count in the filename
+    """
     agent = QLearningAgent()
-    run_episodes(agent, episodes, render=render, fps=10,
-                 window_title="Training – Q‑Learning Zombie")
-    # Save (you can later change to include episode count)
-    agent.save("qtable_zombie.pkl")
-    print(f"Training complete. Saved to qtable_zombie.pkl.")
+    if start_file:
+        if not os.path.exists(start_file):
+            print(f"Error: start file `{start_file}` not found.")
+            sys.exit(1)
+        agent.load(start_file)
+        print(f"Loaded agent from {start_file}. "
+              f"Already trained: {agent.total_episodes} episodes")
+    else:
+        print("Starting training from scratch (epsilon = 1.0)")
+    
+    run_episodes(agent, episodes, render=render, fps=10, window_title="Training Qlearning Zombie")
+
+    # create new session folder and save
+    folder = new_session_folder()
+    new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
+    save_path = os.path.join(folder,new_filename)
+    agent.save(save_path, agent.total_episodes)
+    print(f"Training complete. Saved to {save_path}")
 
 def cmd_play(filename):
+    if not os.path.exists(filename):
+        print("Error: file '{filename}' not found.")
+        sys.exit(1)
+
     agent = QLearningAgent()
     agent.load(filename)
     current_count = agent.total_episodes
 
     # Run exactly ONE episode with rendering
-    run_episodes(agent, 1, render=True, fps=10,
-                 window_title=f"Episode {current_count + 1}")
+    run_episodes(agent, 1, render=True, fps=10, window_title=f"Episode {current_count + 1}")
 
     # Increment and save with updated filename
     agent.total_episodes += 1
     new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
-    agent.save(new_filename)
-    print(f"Episode finished. Saved to {new_filename}")
+    save_dir = os.path.dirname(filename) or "."
+    save_path = os.path.join(save_dir, new_filename)
+    agent.save(save_path)
+    print(f"Episode finished. Saved to {save_path}")
 
-
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python3 main.py -create")
         print("  python3 main.py -train <episodes> [--render]")
+        print("  python3 main.py -train <episodes> <path/to/start.pkl> [--render]")
         print("  python3 main.py -play <file.pkl>")
         sys.exit(1)
 
@@ -157,24 +187,38 @@ if __name__ == "__main__":
         cmd_create()
 
     elif cmd == "-train":
-        render = "--render" in sys.argv
+        args = sys.argv[2:]
+        render = False
         episodes = None
-        for arg in sys.argv[2:]:
-            try:
-                episodes = int(arg)
-                break
-            except ValueError:
-                continue
-        if episodes is None:
-            print("Please specify the number of episodes, e.g.: python3 main.py -train 1000 [--render]")
-            sys.exit(1)
-        cmd_train(episodes, render)
+        start_file = None
 
+        # filter out --render and find episode count and optional .pkl file
+        for arg in args:
+            if arg == "-- render":
+                render = True
+            elif arg.endswith(".pkl"):
+                start_file = arg
+            else:
+                try:
+                    episodes = int(arg)
+                except ValueError:
+                    print(f"Unkown Argument: {arg}")
+                    sys.exit(1)
+        
+        if episodes is None:
+            print("Please specify the number of epsidoes, e.g.: Python3 main.py -train 1000")
+            sys.exit(1)
+
+        cmd_train(episodes, render, start_file)
+    
     elif cmd == "-play":
         if len(sys.argv) != 3:
-            print("Please provide a .pkl file, e.g.: python3 main.py -play qtable_zombie_1000.pkl")
+            print("Please prvide a .pkl file, e.g.: python3 main.py -play qtable_zombie_1000.pkl")
             sys.exit(1)
         cmd_play(sys.argv[2])
-
+    
     else:
-        print(f"Unknown command: {cmd}")
+        print(f"Unkown command: {cmd}")
+
+if __name__ == "__main__":
+    main()

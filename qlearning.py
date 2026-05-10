@@ -57,24 +57,31 @@ class QLearningAgent:
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
-    def save(self, filepath, episodes_trained):
-        data = {
-            'q_table': self.q_table,
-            'epsilon': self.epsilon,
-            'episodes_trained': episodes_trained
-        }
+    def save(self, filename):
         with open(filename, 'wb') as f:
-            pickle.dump(data, f)
+            pickle.dump({
+                'q_table': self.q_table,
+                'epsilon': self.epsilon,
+                'total_episodes': self.total_episodes
+            }, f)
 
     def load(self, filename):
         with open(filename, 'rb') as f:
             data = pickle.load(f)
 
-        # New format: {'q_table': ..., 'total_episodes': ...}
-        if isinstance(data, dict) and 'q_table' in data:
-            self.q_table = data['q_table']
-            return data['qtable'], data['epsilon'], data['episodes_trained']
+        if isinstance(data, dict):
+            # New format: dictionary with possible keys
+            # 'q_table', 'epsilon', 'total_episodes'
+            self.q_table = data.get('q_table', {})
+            self.epsilon = data.get('epsilon', 1.0)
+            self.total_episodes = data.get('total_episodes', 0)
+            # legacy keys (if they exist in some old saved files)
+            if 'qtable' in data:          # handle very old format
+                self.q_table = data['qtable']
+            if 'episodes_trained' in data:
+                self.total_episodes = data['episodes_trained']
         else:
-            # Old format: just the raw Q-table dictionary
+            # Old format: raw Q-table dictionary
             self.q_table = data
-            return data, 1.0, 0
+            self.epsilon = 1.0
+            self.total_episodes = 0
