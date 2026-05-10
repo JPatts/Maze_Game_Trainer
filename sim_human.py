@@ -25,10 +25,10 @@ class SimHuman:
         dist_to_zombie = abs(current_pos[0] - zombie_pos[0]) + abs(current_pos[1] - zombie_pos[1])
 
         # --- Fleeing logic ---
-        if dist_to_zombie < 6 and not self.fleeing:
+        if dist_to_zombie < 3 and not self.fleeing:
             self.fleeing = True
             self.current_path = []   # force recompute of flee path
-        elif self.fleeing and dist_to_zombie >= 8:
+        elif self.fleeing and dist_to_zombie >= 3:
             self.fleeing = False
             self.current_path = []
             self.current_target = None

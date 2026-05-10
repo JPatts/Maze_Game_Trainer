@@ -33,6 +33,8 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
 
     print(f"Running {num_episodes} episode(s)...")
 
+    block_wins = 0 
+
     for ep in range(num_episodes):
         state = game.reset()
         done = False
@@ -83,17 +85,33 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             # Agent step and learning
             action = agent.choose_action(state)
             next_state, reward, done, _ = game.step(action)
+
+            prev_dist = abs(state['zombie_row'] - state['player_row']) + \
+                        abs(state['zombie_col'] - state['player_col'])
+            new_dist = abs(next_state['zombie_row'] - next_state['player_row']) + \
+                        abs(next_state['zombie_col'] - next_state['player_col'])
+            shaped_reward = reward
+            shaped_reward -= 0.01
+            shaped_reward += 0.1 * (prev_dist - new_dist)
+
             agent.update(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
+        
+        agent.decay_epsilon()
+
+        # Check if zombie caught the human this episode
+        if game.zombie_pos == game.player_pos:
+            block_wins += 1
 
         if num_episodes >= 100 and (ep + 1) % 100 == 0:
             print(f"Episode {ep+1}/{num_episodes} completed. "
-                  f"Epsilon: {agent.epsilon:.3f}  Steps: {step_count}")
-
+                  f"Epsilon: {agent.epsilon:.3f}  Steps: {step_count}   "
+                  f"Zombie wins: {block_wins}/100")
+            block_wins = 0
+            
     if render:
         pygame.quit()
-
 
 def cmd_create():
     agent = QLearningAgent()

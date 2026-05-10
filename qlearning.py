@@ -2,19 +2,25 @@ import random
 import pickle
 
 class QLearningAgent:
-    def __init__(self, action_space=4, alpha=0.1, gamma=0.9, epsilon=0.1):
+    def __init__(self, action_space=4, alpha=0.1, gamma=0.9, epsilon_start=1.0,epsilon_end=0.05, epsilon_decay=0.9995):
         self.q_table = {}
         self.action_space = action_space
         self.alpha = alpha
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon = epsilon_start
+        self.epsilon_end  = epsilon_end
+        self.epsilon_decay = epsilon_decay 
         self.total_episodes = 0
 
     def _state_to_key(self, state):
-        """Convert state dict to a hashable tuple for Q-table lookup."""
-        return (state['zombie_row'], state['zombie_col'],
-                state['player_row'], state['player_col'],
-                state['keys_collected'])
+        drow = state['player_row'] - state['zombie_row']
+        dcol = state['player_col'] - state['zombie_col']
+        manhattan = abs(drow) + abs(dcol)
+        dist_bin = min(manhattan // 2, 8)
+        # Direction quadrant 
+        dir_row = (1 if drow > 0 else (-1 if drow < 0 else 0))
+        dir_col = (1 if dcol > 0 else (-1 if dcol < 0 else 0))
+        return (dir_row, dir_col, dist_bin, state['key_collected'])
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
@@ -48,13 +54,16 @@ class QLearningAgent:
             target = reward + self.gamma * max(self.q_table[next_key])
         self.q_table[key][action] += self.alpha * (target - current_q)
 
+    def decay_epsilon(self):
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
+
     def save(self, filename):
         data = {
             'q_table': self.q_table,
             'total_episodes': self.total_episodes
         }
         with open(filename, 'wb') as f:
-            pickle.dump(self.q_table, f)
+            pickle.dump(data, f)
 
     def load(self, filename):
         with open(filename, 'rb') as f:
