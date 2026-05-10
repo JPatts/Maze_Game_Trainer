@@ -8,6 +8,7 @@ class QLearningAgent:
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.total_episodes = 0
 
     def _state_to_key(self, state):
         """Convert state dict to a hashable tuple for Q-table lookup."""
@@ -48,9 +49,22 @@ class QLearningAgent:
         self.q_table[key][action] += self.alpha * (target - current_q)
 
     def save(self, filename):
+        data = {
+            'q_table': self.q_table,
+            'total_episodes': self.total_episodes
+        }
         with open(filename, 'wb') as f:
             pickle.dump(self.q_table, f)
 
     def load(self, filename):
         with open(filename, 'rb') as f:
-            self.q_table = pickle.load(f)
+            data = pickle.load(f)
+
+        # New format: {'q_table': ..., 'total_episodes': ...}
+        if isinstance(data, dict) and 'q_table' in data:
+            self.q_table = data['q_table']
+            self.total_episodes = data.get('total_episodes', 0)
+        else:
+            # Old format: just the raw Q-table dictionary
+            self.q_table = data
+            self.total_episodes = 0  # unknown, start counting from here

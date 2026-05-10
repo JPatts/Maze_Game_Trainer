@@ -1,37 +1,38 @@
-# main.py
 import sys
 import json
-import time
 import pygame
 from env import Environment, MazeGame
 from sim_human import SimHuman
 from qlearning import QLearningAgent
 
-def run_training(num_episodes, render=False):
-    # Load maze and game
+
+def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze"):
+    """
+    Run one or more episodes using the given agent.
+    Returns after all episodes finish. Does NOT save the agent.
+    """
+    # Set up the environment and simulated human once
     env = Environment('maze_layout.json')
     game = MazeGame(env)
     human = SimHuman(env)
 
-    # Inject human behaviour into the game step
+    # Connect human to the game
     game._human_choose_action = lambda: human.choose_action(
         game.player_pos, game.key_positions, game.keys_collected, game.zombie_pos
     )
 
-    agent = QLearningAgent()
-
-    # PyGame setup (only once if rendering)
+    # Pygame initialisation (only if rendering)
     if render:
         pygame.init()
         CELL_SIZE = 60
         screen = pygame.display.set_mode(
             (env.cols * CELL_SIZE, env.rows * CELL_SIZE)
         )
-        pygame.display.set_caption("Training – Q‑Learning Zombie")
+        pygame.display.set_caption(window_title)
         clock = pygame.time.Clock()
-        FPS = 10  # speed adjustable
 
-    print(f"Training for {num_episodes} episodes...")
+    print(f"Running {num_episodes} episode(s)...")
+
     for ep in range(num_episodes):
         state = game.reset()
         done = False
@@ -44,12 +45,10 @@ def run_training(num_episodes, render=False):
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
-                screen.fill((194, 197, 204))           # background
-
-                # Draw static maze walls
+                screen.fill((194, 197, 204))
                 env.draw(screen, CELL_SIZE)
 
-                # Draw keys (uncollected)
+                # Keys (uncollected)
                 for i, (kpos, collected) in enumerate(
                     zip(game.key_positions, game.keys_collected)
                 ):
@@ -58,16 +57,15 @@ def run_training(num_episodes, render=False):
                             screen, (255, 255, 0),
                             (kpos[1] * CELL_SIZE + CELL_SIZE // 2,
                              kpos[0] * CELL_SIZE + CELL_SIZE // 2),
-                            CELL_SIZE // 4
-                        )
+                            CELL_SIZE // 4)
 
-                # Draw door (always visible)
+                # Door
                 dr, dc = game.door_pos
                 pygame.draw.rect(screen, (139, 69, 19),
                                  (dc * CELL_SIZE, dr * CELL_SIZE,
                                   CELL_SIZE, CELL_SIZE))
 
-                # Draw player (green) and zombie (red)
+                # Player (green) and zombie (red)
                 px, py = game.player_pos
                 zx, zy = game.zombie_pos
                 pygame.draw.circle(screen, (0, 255, 0),
@@ -80,65 +78,84 @@ def run_training(num_episodes, render=False):
                                    CELL_SIZE // 3)
 
                 pygame.display.flip()
-                clock.tick(FPS)
+                clock.tick(fps)
 
-            # Agent acts, environment responds, learning happens
+            # Agent step and learning
             action = agent.choose_action(state)
             next_state, reward, done, _ = game.step(action)
             agent.update(state, action, reward, next_state, done)
             state = next_state
             step_count += 1
 
-        if (ep + 1) % 100 == 0:
+        if num_episodes >= 100 and (ep + 1) % 100 == 0:
             print(f"Episode {ep+1}/{num_episodes} completed. "
                   f"Epsilon: {agent.epsilon:.3f}  Steps: {step_count}")
-
-    # Save the trained agent
-    agent.save("qtable_zombie.pkl")
-    print("Training complete. Q-table saved to qtable_zombie.pkl.")
 
     if render:
         pygame.quit()
 
 
+def cmd_create():
+    agent = QLearningAgent()
+    agent.save("qtable_zombie_init.pkl")
+    print("Created fresh qtable_zombie_init.pkl.")
+
+def cmd_train(episodes, render):
+    agent = QLearningAgent()
+    run_episodes(agent, episodes, render=render, fps=10,
+                 window_title="Training – Q‑Learning Zombie")
+    # Save (you can later change to include episode count)
+    agent.save("qtable_zombie.pkl")
+    print(f"Training complete. Saved to qtable_zombie.pkl.")
+
+def cmd_play(filename):
+    agent = QLearningAgent()
+    agent.load(filename)
+    current_count = agent.total_episodes
+
+    # Run exactly ONE episode with rendering
+    run_episodes(agent, 1, render=True, fps=10,
+                 window_title=f"Episode {current_count + 1}")
+
+    # Increment and save with updated filename
+    agent.total_episodes += 1
+    new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
+    agent.save(new_filename)
+    print(f"Episode finished. Saved to {new_filename}")
+
+
 if __name__ == "__main__":
-    # Simple manual argument parsing
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python3 main.py -create")
         print("  python3 main.py -train <episodes> [--render]")
+        print("  python3 main.py -play <file.pkl>")
         sys.exit(1)
 
     cmd = sys.argv[1]
 
     if cmd == "-create":
-        # Placeholder for future DB integration
-        print("Creating initial zombie agent file...")
-        agent = QLearningAgent()
-        agent.save("qtable_zombie_init.pkl")
-        print("Generated fresh qtable_zombie_init.pkl.")
+        cmd_create()
 
     elif cmd == "-train":
-        # check for --render flag anywhere in args
         render = "--render" in sys.argv
-
-        # find number of episodes: first argument after -train that is a number
         episodes = None
-        for i in range(2, len(sys.argv)):
+        for arg in sys.argv[2:]:
             try:
-                episodes = int(sys.argv[i])
+                episodes = int(arg)
                 break
             except ValueError:
                 continue
-
         if episodes is None:
-            print("Please specify the number of episodes, e.g.: "
-                  "python3 main.py -train 1000 [--render]")
+            print("Please specify the number of episodes, e.g.: python3 main.py -train 1000 [--render]")
             sys.exit(1)
+        cmd_train(episodes, render)
 
-        run_training(episodes, render=render)
+    elif cmd == "-play":
+        if len(sys.argv) != 3:
+            print("Please provide a .pkl file, e.g.: python3 main.py -play qtable_zombie_1000.pkl")
+            sys.exit(1)
+        cmd_play(sys.argv[2])
 
     else:
         print(f"Unknown command: {cmd}")
-        print("Usage: python3 main.py -create   OR   "
-              "python3 main.py -train <episodes> [--render]")
