@@ -98,7 +98,7 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             shaped_reward -= 0.01
             shaped_reward += 0.1 * (prev_dist - new_dist)
 
-            agent.update(state, action, reward, next_state, done)
+            agent.update(state, action, shaped_reward, next_state, done)
             state = next_state
             step_count += 1
         

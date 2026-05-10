@@ -13,14 +13,40 @@ class QLearningAgent:
         self.total_episodes = 0
 
     def _state_to_key(self, state):
-        drow = state['player_row'] - state['zombie_row']
-        dcol = state['player_col'] - state['zombie_col']
+        """
+        Convert state dictionary to a hasable key for q-table lookup
+        Includes direction to human, distance bucket, wall info, and keys collected
+        """
+
+        if state is None:
+            return None
+        
+        zombie_row = state['zombie_row']
+        zombie_col = state['zombie_col']
+        player_row = state['player_row']
+        player_col = state['player_col']
+
+        # relative position
+        drow = player_row - zombie_row
+        dcol = player_col - zombie_col
         manhattan = abs(drow) + abs(dcol)
+
+        # Diescretize distance into bins
         dist_bin = min(manhattan // 2, 8)
-        # Direction quadrant 
+    
+        # Direction quadrant indicators
         dir_row = (1 if drow > 0 else (-1 if drow < 0 else 0))
         dir_col = (1 if dcol > 0 else (-1 if dcol < 0 else 0))
-        return (dir_row, dir_col, dist_bin, state['keys_collected'])
+
+        # wall detection - which direction are blocked
+        walls = (
+            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row - 1, zombie_col),
+            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col + 1),
+            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row + 1, zombie_col),
+            not state['maze'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col - 1),
+        )
+
+        return (dir_row, dir_col, dist_bin, walls, state['keys_collected'])
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
