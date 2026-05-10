@@ -91,6 +91,34 @@ class SimHuman:
         self.current_target = target
         self.current_path = self._astar(current_pos, target)
 
+    def _astar(self, start, goal):
+        import heapq
+        def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
+        open_set = []
+        heapq.heappush(open_set, (0, start))
+        came_from = {start: None}
+        g_score = {start: 0}
+        while open_set:
+            _, current = heapq.heappop(open_set)
+            if current == goal:
+                break
+            for nb in self._get_neighbors(current):
+                tg = g_score[current] + 1
+                if nb not in g_score or tg < g_score[nb]:
+                    g_score[nb] = tg
+                    f = tg + heuristic(nb, goal)
+                    heapq.heappush(open_set, (f, nb))
+                    came_from[nb] = current
+        if goal not in came_from:
+            return []
+        path = []
+        cur = goal
+        while cur is not None:
+            path.append(cur)
+            cur = came_from[cur]
+        path.reverse()
+        return path
+    
     def _get_neighbors(self, pos):
         r, c = pos
         cand = [(r-1,c), (r,c+1), (r+1,c), (r,c-1)]
