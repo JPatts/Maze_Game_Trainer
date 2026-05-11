@@ -29,13 +29,39 @@ class SimHuman:
         """
         Returns an action: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT, or None (no move).
         """
-        self._update_objective(current_pos, key_positions, keys_collected)
+        self.zombie_pos = zombie_pos
+        self._update_objective(current_pos, key_positions, keys_collected, zombie_pos)
+
+        if not self.current_path:
+            retreat_target = self._find_retreat_target(current_pos, zombie_pos)
+            if retreat_target:
+                self.current_path = self._astar(current_pos, retreat_target, zombie_pos)
 
         action = None
         if self.current_path and len(self.current_path) >= 2:
             # Move from current_path[0] (us) to current_path[1]
             next_cell = self.current_path[1]
             action = self._direction_to_action(current_pos, next_cell)
+
+        next_cell = self.current_path[1] if self.current_path else None
+
+        # hard rule never step on zombie
+        if next_cell and next_cell == zombie_pos:
+            safe_actions = []
+            current_r, current_c = current_pos
+            for action, (dr,dc) in enumerate([(-1,0),(0,1),(1,0),(0,-1)]):
+                nr, nc = current_r + dr, current_c + dc
+                if self.env.is_valid_move(current_r, current_c, nr, nc):
+                    if (nr,nc) != zombie_pos:
+                        new_dist = abs(nr - zombie_pos[0] + abs(nc - zombie_pos[1]))
+                        old_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
+                        if new_dist > old_dist:
+                            safe_actions.append(action)
+            if safe_actions:
+                action = random.choice(safe_actions)
+            else:
+                action = None
+            self.current_path = []
 
         # Apply human‑like mistakes for move interval
         if action is not None:
@@ -67,7 +93,25 @@ class SimHuman:
 
         return action
     
-    def _update_objective(self, current_pos, key_positions, keys_collected):
+    def _find_retreat_target(self,start,zombie_pos):
+        from collections import deque
+        visited = {start}
+        q = deque([start])
+        best_dist = -1
+        best_cell = start
+        while q:
+            cell = q.popleft()
+            d = abs(cell[0] - zombie_pos[0]) + abs(cell[1] - zombie_pos)
+            if d > best_dist:
+                best_dist = d
+                best_cell = cell
+            for nb in self._get_neighbors(cell):
+                if nb not in visited:
+                    visited.add(nb)
+                    q.append(nb)
+        return best_cell if best_dist > 0 else None
+    
+    def _update_objective(self, current_pos, key_positions, keys_collected, zombie_pos):
         """Pick a new target (key or door) if needed, and compute A* path."""
         # If we already have a valid target and path, don't change
         if self.current_target is not None and self.current_path:
@@ -96,9 +140,9 @@ class SimHuman:
             target = (door['row'], door['col'])
 
         self.current_target = target
-        self.current_path = self._astar(current_pos, target)
+        self.current_path = self._astar(current_pos, target, zombie_pos)
 
-    def _astar(self, start, goal):
+    def _astar(self, start, goal, zombie_pos=None):
         import heapq
         def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
         open_set = []
@@ -110,7 +154,8 @@ class SimHuman:
             if current == goal:
                 break
             for nb in self._get_neighbors(current):
-                tg = g_score[current] + 1
+                move_cost = 1 + self._zombie_penalty(nb, zombie_pos)
+                tg = g_score[current] + move_cost
                 if nb not in g_score or tg < g_score[nb]:
                     g_score[nb] = tg
                     f = tg + heuristic(nb, goal)
@@ -125,6 +170,19 @@ class SimHuman:
             cur = came_from[cur]
         path.reverse()
         return path
+    
+    def _zombie_penalty(self, cell, zombie_pos):
+        if zombie_pos is None:
+            return 0
+        
+        dist = abs(cell[0] - zombie_pos[0]) + abs(cell[1] - zombie_pos[1])
+        if dist <= 1:
+            return 50 
+        elif dist == 2:
+            return 10
+        elif dist == 3:
+            return 5
+        return 0
     
     def _get_neighbors(self, pos):
         r, c = pos
