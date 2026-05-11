@@ -8,12 +8,19 @@ class SimHuman:
         self.cols = env.cols
         self.error_prob = error_prob
         self.hesitation_prob = hesitation_prob
-        self.error_interval = 2       # check for error after this many moves
-        self.hesitation_interval = 2    # check for hesitation after this many moves
+        self.error_interval = 3       # check for error after this many moves
+        self.hesitation_interval = 3    # check for hesitation after this many moves
 
         # Internal state
         self.current_path = []          # list of (r,c) from current position to target
         self.current_target = None      # (r,c) of key/door/flee point
+        self.fleeing = False
+        self.steps_since_error = 0
+        self.steps_since_hesitation = 0
+
+    def reset(self):
+        self.current_path = []
+        self.current_target = None
         self.fleeing = False
         self.steps_since_error = 0
         self.steps_since_hesitation = 0

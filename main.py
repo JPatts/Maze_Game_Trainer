@@ -42,6 +42,7 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
 
     for ep in range(num_episodes):
         state = game.reset()
+        human.reset()
         done = False
         step_count = 0
 
