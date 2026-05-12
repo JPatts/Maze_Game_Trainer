@@ -143,7 +143,7 @@ class MazeGame:
         # check loss condition
         if self.zombie_pos == self.player_pos:
             self.done = True
-            reward = 20
+            reward = 100
             return self._get_state(), reward, self.done, {} 
 
         # human moves
@@ -157,11 +157,11 @@ class MazeGame:
         # check win condition: player has all keys and at door
         if self.player_pos == self.door_pos and all(self.keys_collected):
             self.done = True
-            reward = -10.0
+            reward = -50.0
             return self._get_state(), reward, self.done, {"win": True}
          
         # small cost of reward per step to encourage getting to human quicker
-        reward = -0.1
+        reward = -1
         return self._get_state(), reward, self.done, {}
     
     def _get_state(self):
