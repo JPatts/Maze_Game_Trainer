@@ -123,7 +123,7 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
 def cmd_create():
     agent = QLearningAgent()
     folder = new_session_folder()
-    path = os.path.join(folder, "qtable_zombie_init.pkl")
+    path = os.path.join(folder, "qtable_zombie_init.json")
     agent.save(path)
     print(f"Created fresh {path}")
 
@@ -148,7 +148,7 @@ def cmd_train(episodes, render, start_file):
 
     # create new session folder and save
     folder = new_session_folder()
-    new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
+    new_filename = f"qtable_zombie_{agent.total_episodes}.json"
     save_path = os.path.join(folder,new_filename)
     agent.save(save_path)
     print(f"Training complete. Saved to {save_path}")

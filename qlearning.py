@@ -1,3 +1,5 @@
+import json
+import os
 import random
 import pickle
 
@@ -32,7 +34,8 @@ class QLearningAgent:
             not state['env'].is_valid_move(zombie_row, zombie_col, zombie_row, zombie_col - 1),
         )
 
-        return (zombie_row, zombie_col, walls, state['keys_collected'])
+        walls_str = ",".join(str(int(w)) for w in walls)
+        return f"{zombie_row}|{zombie_col}|{walls_str}|{state['keys_collected']}"
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
@@ -70,30 +73,18 @@ class QLearningAgent:
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
     def save(self, filename):
-        with open(filename, 'wb') as f:
-            pickle.dump({
+        if not filename.endswith(".json"):
+            filename = os.path.splitext(filename)[0] + ".json"
+        with open(filename,'w') as f:
+            json.dump({
                 'q_table': self.q_table,
                 'epsilon': self.epsilon,
-                'total_episodes': self.total_episodes
-            }, f)
+                'total_episodes': self.total_episodes,
+            }, f, indent=2)
 
     def load(self, filename):
-        with open(filename, 'rb') as f:
-            data = pickle.load(f)
-
-        if isinstance(data, dict):
-            # New format: dictionary with possible keys
-            # 'q_table', 'epsilon', 'total_episodes'
-            self.q_table = data.get('q_table', {})
-            self.epsilon = data.get('epsilon', 1.0)
-            self.total_episodes = data.get('total_episodes', 0)
-            # legacy keys (if they exist in some old saved files)
-            if 'qtable' in data:          # handle very old format
-                self.q_table = data['qtable']
-            if 'episodes_trained' in data:
-                self.total_episodes = data['episodes_trained']
-        else:
-            # Old format: raw Q-table dictionary
-            self.q_table = data
-            self.epsilon = 1.0
-            self.total_episodes = 0
+        with open(filename, 'r') as f:
+            data = json.load(f)
+        self.q_table = data.get('q_table', {})
+        self.epsilon = data.get('epsilon', 1.0)
+        self.total_episodes = data.get('total_episodes', 0)
