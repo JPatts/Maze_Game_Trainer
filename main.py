@@ -104,6 +104,7 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             step_count += 1
         
         agent.decay_epsilon()
+        agent.decay_alpha()
 
         # Check if zombie caught the human this episode
         if game.zombie_pos == game.player_pos:

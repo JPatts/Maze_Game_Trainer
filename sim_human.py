@@ -101,7 +101,7 @@ class SimHuman:
         best_cell = start
         while q:
             cell = q.popleft()
-            d = abs(cell[0] - zombie_pos[0]) + abs(cell[1] - zombie_pos)
+            d = abs(cell[0] - zombie_pos[0]) + abs(cell[1] - zombie_pos[1])
             if d > best_dist:
                 best_dist = d
                 best_cell = cell

@@ -4,10 +4,12 @@ import random
 import pickle
 
 class QLearningAgent:
-    def __init__(self, action_space=4, alpha=0.1, gamma=0.9, epsilon_start=1.0,epsilon_end=0.05, epsilon_decay=0.9995):
+    def __init__(self, action_space=4, alpha=0.3, gamma=0.95, epsilon_start=1.0,epsilon_end=0.05, epsilon_decay=0.9995):
         self.q_table = {}
         self.action_space = action_space
         self.alpha = alpha
+        self.alpha_min = 0.01
+        self.alpha_decay = 0.9998
         self.gamma = gamma
         self.epsilon = epsilon_start
         self.epsilon_end  = epsilon_end
@@ -36,6 +38,9 @@ class QLearningAgent:
 
         walls_str = ",".join(str(int(w)) for w in walls)
         return f"{zombie_row}|{zombie_col}|{walls_str}|{state['keys_collected']}"
+    
+    def decay_alpha(self):
+        self.alpha = max(self.alpha_min, self.alpha * self.alpha_decay)
 
     def choose_action(self, state):
         """Epsilon-greedy action selection."""
