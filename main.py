@@ -162,14 +162,15 @@ def cmd_play(filename):
     agent.load(filename)
     current_count = agent.total_episodes
 
-    run_episodes(agent, 1, render=True, fps=10, window_title=f"Episode {current_count + 1}")
+    result = run_episodes(agent, 1, render=True, fps=10, window_title=f"Episode {current_count + 1}")
+    print(result)
 
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python3 main.py -create")
         print("  python3 main.py -train <episodes> [--render]")
-        print("  python3 main.py -train <episodes> <path/to/start.pkl> [--render]")
+        print("  python3 main.py -train <episodes> <path/to/start.json> [--render]")
         print("  python3 main.py -play <file.pkl>")
         sys.exit(1)
 
@@ -188,7 +189,7 @@ def main():
         for arg in args:
             if arg == "-- render":
                 render = True
-            elif arg.endswith(".pkl"):
+            elif arg.endswith(".json"):
                 start_file = arg
             else:
                 try:
