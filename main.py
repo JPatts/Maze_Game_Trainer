@@ -162,16 +162,7 @@ def cmd_play(filename):
     agent.load(filename)
     current_count = agent.total_episodes
 
-    # Run exactly ONE episode with rendering
     run_episodes(agent, 1, render=True, fps=10, window_title=f"Episode {current_count + 1}")
-
-    # Increment and save with updated filename
-    agent.total_episodes += 1
-    new_filename = f"qtable_zombie_{agent.total_episodes}.pkl"
-    save_dir = os.path.dirname(filename) or "."
-    save_path = os.path.join(save_dir, new_filename)
-    agent.save(save_path)
-    print(f"Episode finished. Saved to {save_path}")
 
 def main():
     if len(sys.argv) < 2:
