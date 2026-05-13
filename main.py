@@ -91,17 +91,25 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             action = agent.choose_action(state)
             next_state, reward, done, _ = game.step(action)
 
-            prev_dist = abs(state['zombie_row'] - state['player_row']) + \
+            """prev_dist = abs(state['zombie_row'] - state['player_row']) + \
                         abs(state['zombie_col'] - state['player_col'])
             new_dist = abs(next_state['zombie_row'] - next_state['player_row']) + \
-                        abs(next_state['zombie_col'] - next_state['player_col'])
-            shaped_reward = reward
-            shaped_reward -= 0.01
+                        abs(next_state['zombie_col'] - next_state['player_col'])"""
+            
+            dist = abs(state['zombie_row'] - state['player_row']) + abs(state['zombie_col'] - state['player_col'])
+            shaped_reward = reward - 0.05
 
-            # prozimity bonus & penalty
-            if new_dist < prev_dist:
+            if dist == 0:
+                pass
+            elif dist <= 2:
+                shaped_reward += 2.0
+            elif dist <= 4:
+                shaped_reward += 1.0
+            elif dist <= 6:
                 shaped_reward += 0.5
-            elif new_dist > prev_dist:
+            elif dist <= 10:
+                shaped_reward += 0.1
+            else:
                 shaped_reward -= 0.5
 
             agent.update(state, action, shaped_reward, next_state, done)

@@ -2,7 +2,7 @@ import random
 from collections import deque
 
 class SimHuman:
-    def __init__(self, env, error_prob=0.25, hesitation_prob=0.50):
+    def __init__(self, env, error_prob=0.20, hesitation_prob=0.30):
         self.env = env
         self.rows = env.rows
         self.cols = env.cols
@@ -38,8 +38,8 @@ class SimHuman:
             int or None: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT, or None to stay in place.
         """
         self.zombie_pos = zombie_pos
-
         self._update_objective(current_pos, key_positions, keys_collected, zombie_pos)
+        action = None
 
         if self._flee_if_too_close(current_pos, zombie_pos):
             if self.current_path and len(self.current_path) >= 2:
@@ -48,58 +48,54 @@ class SimHuman:
                     action = self._safe_retreat_action(current_pos, zombie_pos)
                     if action is not None:
                         self.current_path.pop(0)
-                    return action
+                else:
+                    action = self._direction_to_action(current_pos, next_cell)
+                    if action is not None:
+                        self.current_path.pop(0)
+        else:
+            if self.current_path and len(self.current_path) >= 2:
+                next_cell = self.current_path[1]
                 action = self._direction_to_action(current_pos, next_cell)
-                if action is not None and action == self._direction_to_action(current_pos, next_cell):
+
+            if (action is not None and self.current_path
+                    and len(self.current_path) >= 2 and next_cell == zombie_pos):
+                safe_actions = []
+                current_r, current_c = current_pos
+                for act, (dr, dc) in enumerate([(-1, 0), (0, 1), (1, 0), (0, -1)]):
+                    nr, nc = current_r + dr, current_c + dc
+                    if self.env.is_valid_move(current_r, current_c, nr, nc):
+                        if (nr, nc) != zombie_pos:
+                            new_dist = abs(nr - zombie_pos[0]) + abs(nc - zombie_pos[1])
+                            old_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
+                            if new_dist > old_dist:
+                                safe_actions.append(act)
+                action = random.choice(safe_actions) if safe_actions else None
+                self.current_path = []
+
+            if action is not None:
+                self.steps_since_error += 1
+                if self.steps_since_error >= self.error_interval:
+                    if random.random() < self.error_prob:
+                        valid_actions = self._get_valid_actions(current_pos)
+                        if valid_actions:
+                            action = random.choice(valid_actions)
+                            self.current_path = []
+                    self.steps_since_error = 0
+
+                if (self.current_path and len(self.current_path) >= 2
+                        and action == self._direction_to_action(current_pos, self.current_path[1])):
                     self.current_path.pop(0)
-                return action
-            else:
-                pass
 
-        action = None
-        if self.current_path and len(self.current_path) >= 2:
-            next_cell = self.current_path[1]
-            action = self._direction_to_action(current_pos, next_cell)
-
-        if self.current_path and len(self.current_path) >= 2 and next_cell == zombie_pos:
-            safe_actions = []
-            current_r, current_c = current_pos
-            for act, (dr, dc) in enumerate([(-1, 0), (0, 1), (1, 0), (0, -1)]):
-                nr, nc = current_r + dr, current_c + dc
-                if self.env.is_valid_move(current_r, current_c, nr, nc):
-                    if (nr, nc) != zombie_pos:
-                        new_dist = abs(nr - zombie_pos[0]) + abs(nc - zombie_pos[1])
-                        old_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
-                        if new_dist > old_dist:
-                            safe_actions.append(act)
-            if safe_actions:
-                action = random.choice(safe_actions)
-            else:
-                action = None
-            self.current_path = []
-
+        # Hesitation applied universally — flee and normal paths both reach this
         if action is not None:
-            self.steps_since_error += 1
             self.steps_since_hesitation += 1
-
-            if self.steps_since_error >= self.error_interval:
-                if random.random() < self.error_prob:
-                    valid_actions = self._get_valid_actions(current_pos)
-                    if valid_actions:
-                        action = random.choice(valid_actions)
-                        self.current_path = []
-                self.steps_since_error = 0
-
             if self.steps_since_hesitation >= self.hesitation_interval:
                 if random.random() < self.hesitation_prob:
                     action = None
                 self.steps_since_hesitation = 0
 
-        if (action is not None and self.current_path
-                and action == self._direction_to_action(current_pos, self.current_path[1])):
-            self.current_path.pop(0)
-
         return action
+       
     
     def _find_retreat_target(self,start,zombie_pos):
         from collections import deque
