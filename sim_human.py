@@ -27,68 +27,76 @@ class SimHuman:
 
     def choose_action(self, current_pos, key_positions, keys_collected, zombie_pos):
         """
-        Returns an action: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT, or None (no move).
+        Decide the next move for the simulated human.
+
+        First plans a path to the current objective (key or door). If the zombie
+        is too close, overrides with a flee maneuver. Otherwise follows the
+        planned path while applying human‑like hesitation and random errors.
+        Never steps onto the zombie cell.
+
+        Returns:
+            int or None: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT, or None to stay in place.
         """
         self.zombie_pos = zombie_pos
+
         self._update_objective(current_pos, key_positions, keys_collected, zombie_pos)
 
-        if not self.current_path:
-            retreat_target = self._find_retreat_target(current_pos, zombie_pos)
-            if retreat_target:
-                self.current_path = self._astar(current_pos, retreat_target, zombie_pos)
+        if self._flee_if_too_close(current_pos, zombie_pos):
+            if self.current_path and len(self.current_path) >= 2:
+                next_cell = self.current_path[1]
+                if next_cell == zombie_pos:
+                    action = self._safe_retreat_action(current_pos, zombie_pos)
+                    if action is not None:
+                        self.current_path.pop(0)
+                    return action
+                action = self._direction_to_action(current_pos, next_cell)
+                if action is not None and action == self._direction_to_action(current_pos, next_cell):
+                    self.current_path.pop(0)
+                return action
+            else:
+                pass
 
         action = None
         if self.current_path and len(self.current_path) >= 2:
-            # Move from current_path[0] (us) to current_path[1]
             next_cell = self.current_path[1]
             action = self._direction_to_action(current_pos, next_cell)
 
-        next_cell = self.current_path[1] if self.current_path else None
-
-        # hard rule never step on zombie
-        if next_cell and next_cell == zombie_pos:
+        if self.current_path and len(self.current_path) >= 2 and next_cell == zombie_pos:
             safe_actions = []
             current_r, current_c = current_pos
-            for action, (dr,dc) in enumerate([(-1,0),(0,1),(1,0),(0,-1)]):
+            for act, (dr, dc) in enumerate([(-1, 0), (0, 1), (1, 0), (0, -1)]):
                 nr, nc = current_r + dr, current_c + dc
                 if self.env.is_valid_move(current_r, current_c, nr, nc):
-                    if (nr,nc) != zombie_pos:
-                        new_dist = abs(nr - zombie_pos[0] + abs(nc - zombie_pos[1]))
+                    if (nr, nc) != zombie_pos:
+                        new_dist = abs(nr - zombie_pos[0]) + abs(nc - zombie_pos[1])
                         old_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
                         if new_dist > old_dist:
-                            safe_actions.append(action)
+                            safe_actions.append(act)
             if safe_actions:
                 action = random.choice(safe_actions)
             else:
                 action = None
             self.current_path = []
 
-        # Apply human‑like mistakes for move interval
         if action is not None:
             self.steps_since_error += 1
             self.steps_since_hesitation += 1
 
-            # Error: random valid move every N moves?
             if self.steps_since_error >= self.error_interval:
                 if random.random() < self.error_prob:
                     valid_actions = self._get_valid_actions(current_pos)
                     if valid_actions:
                         action = random.choice(valid_actions)
-                        # discard current path because we just left it
                         self.current_path = []
                 self.steps_since_error = 0
 
-            # Hesitation: no move every N moves
             if self.steps_since_hesitation >= self.hesitation_interval:
                 if random.random() < self.hesitation_prob:
                     action = None
                 self.steps_since_hesitation = 0
 
-        # If we actually moved along the planned path, advance the path
-        if action is not None and self.current_path and action == self._direction_to_action(
-            current_pos, self.current_path[1]
-        ):
-            # We are following the path – pop the start so next call is aligned
+        if (action is not None and self.current_path
+                and action == self._direction_to_action(current_pos, self.current_path[1])):
             self.current_path.pop(0)
 
         return action
@@ -206,3 +214,31 @@ class SimHuman:
         if dc == -1: return 3
         if dc == 1: return 1
         return None
+    
+    def _flee_if_too_close(self, current_pos, zombie_pos):
+        """If zombie is within 2 cells, pick a far-away cell (BFS) and go there."""
+        dist = abs(current_pos[0] - zombie_pos[0]) + abs(current_pos[1] - zombie_pos[1])
+        if dist > 2:
+            return False   # not too close
+
+        # Already fleeing?  If we've reached the target (or it's no longer valid),
+        # clear the fleeing flag and let normal logic resume.
+        if self.fleeing and self.current_target is not None:
+            if current_pos == self.current_target:
+                self.fleeing = False
+                self.current_path = []
+                self.current_target = None
+            return True   # keep fleeing
+
+        # Start a new flee
+        self.fleeing = True
+        # Find the cell that is farthest from the zombie (simple BFS)
+        retreat = self._find_retreat_target(current_pos, zombie_pos)
+        if retreat and retreat != current_pos:
+            self.current_target = retreat
+            self.current_path = self._astar(current_pos, retreat, zombie_pos)
+            return True
+
+        # If no safe cell found, just continue normally
+        self.fleeing = False
+        return False

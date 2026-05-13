@@ -1,7 +1,7 @@
 import json
 import os
 import random
-import pickle
+import math
 
 class QLearningAgent:
     def __init__(self, action_space=4, alpha=0.3, gamma=0.95, epsilon_start=1.0,epsilon_end=0.05, epsilon_decay=0.9995):
@@ -18,8 +18,8 @@ class QLearningAgent:
 
     def _state_to_key(self, state):
         """
-        Convert state dictionary to a hasable key for q-table lookup
-        Includes direction to human, distance bucket, wall info, and keys collected
+        Convert state dictionary to a hashable key for q-table lookup
+        Includes direction to human, distance bucket, wall info
         """
 
         if state is None:
@@ -37,7 +37,30 @@ class QLearningAgent:
         )
 
         walls_str = ",".join(str(int(w)) for w in walls)
-        return f"{zombie_row}|{zombie_col}|{walls_str}|{state['keys_collected']}"
+
+        # relative direction to human
+        dr = state['player_row'] - zombie_row
+        dc = state['player_col'] - zombie_col
+
+        # Avoid dicision by zero 
+        if dr == 0 and dc == 0:
+            direction = "same"
+        else:
+            angle = math.atan2(-dr, dc)
+            angle = (angle + 2 * math.pi) % (2 * math.pi)
+            idx = int(round(angle / (math.pu / 4))) % 8
+            DIRS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"] 
+            direction = DIRS[idx]
+
+        dist = abs(dr) + abs(dc)
+        if dist <= 2:
+            bucket = "close"
+        elif dist <= 6:
+            bucket = "medium"
+        else:
+            bucket = "far"
+
+        return f"{zombie_row}|{zombie_col}|{walls_str}|{direction}|{bucket}"
     
     def decay_alpha(self):
         self.alpha = max(self.alpha_min, self.alpha * self.alpha_decay)
