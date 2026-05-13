@@ -48,7 +48,7 @@ class QLearningAgent:
         else:
             angle = math.atan2(-dr, dc)
             angle = (angle + 2 * math.pi) % (2 * math.pi)
-            idx = int(round(angle / (math.pu / 4))) % 8
+            idx = int(round(angle / (math.pi / 4))) % 8
             DIRS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"] 
             direction = DIRS[idx]
 

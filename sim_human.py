@@ -242,3 +242,31 @@ class SimHuman:
         # If no safe cell found, just continue normally
         self.fleeing = False
         return False
+    
+    def _safe_retreat_action(self, current_pos, zombie_pos):
+        """
+        Return an action that moves the human away from the zombie.
+        Prefers moves that increase Manhattan distance. If none are possible,
+        picks any valid move (other than stepping on the zombie).
+        Returns None if no safe move exists.
+        """
+        valid_actions = []
+        retreat_actions = []
+        current_r, current_c = current_pos
+        best_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
+
+        for act, (dr, dc) in enumerate([(-1, 0), (0, 1), (1, 0), (0, -1)]):
+            nr, nc = current_r + dr, current_c + dc
+            if self.env.is_valid_move(current_r, current_c, nr, nc):
+                if (nr, nc) == zombie_pos:
+                    continue
+                dist = abs(nr - zombie_pos[0]) + abs(nc - zombie_pos[1])
+                if dist > best_dist:
+                    retreat_actions.append(act)
+                valid_actions.append(act)
+
+        if retreat_actions:
+            return random.choice(retreat_actions)
+        if valid_actions:
+            return random.choice(valid_actions)
+        return None

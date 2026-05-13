@@ -6,3 +6,5 @@ __pycahce__/
 # Saved q Table files and trainin session folders
 *.pkl
 qtable_session_*/
+
+.DS_Store
