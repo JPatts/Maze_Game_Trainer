@@ -2,7 +2,7 @@ import random
 from collections import deque
 
 class SimHuman:
-    def __init__(self, env, error_prob=0.20, hesitation_prob=0.30):
+    def __init__(self, env, error_prob=0.20, hesitation_prob=0.15):
         self.env = env
         self.rows = env.rows
         self.cols = env.cols
@@ -15,8 +15,8 @@ class SimHuman:
         self.current_path = []          # list of (r,c) from current position to target
         self.current_target = None      # (r,c) of key/door/flee point
         self.fleeing = False
-        self.steps_since_error = 0
-        self.steps_since_hesitation = 0
+        self.steps_since_error = 4
+        self.steps_since_hesitation = 4
 
     def reset(self):
         self.current_path = []
@@ -41,7 +41,11 @@ class SimHuman:
         self._update_objective(current_pos, key_positions, keys_collected, zombie_pos)
         action = None
 
+        self._update_objective(current_pos, key_positions, keys_collected, zombie_pos)
+        action = None
+
         if self._flee_if_too_close(current_pos, zombie_pos):
+            # We want to flee. Try to follow a flee path first.
             if self.current_path and len(self.current_path) >= 2:
                 next_cell = self.current_path[1]
                 if next_cell == zombie_pos:
@@ -52,25 +56,19 @@ class SimHuman:
                     action = self._direction_to_action(current_pos, next_cell)
                     if action is not None:
                         self.current_path.pop(0)
+            # Fallback: if we still have no action, use any safe retreat
+            if action is None:
+                action = self._safe_retreat_action(current_pos, zombie_pos)
+                self.current_path = []   # discard any stale path
         else:
+            # Normal path following
             if self.current_path and len(self.current_path) >= 2:
                 next_cell = self.current_path[1]
                 action = self._direction_to_action(current_pos, next_cell)
-
-            if (action is not None and self.current_path
-                    and len(self.current_path) >= 2 and next_cell == zombie_pos):
-                safe_actions = []
-                current_r, current_c = current_pos
-                for act, (dr, dc) in enumerate([(-1, 0), (0, 1), (1, 0), (0, -1)]):
-                    nr, nc = current_r + dr, current_c + dc
-                    if self.env.is_valid_move(current_r, current_c, nr, nc):
-                        if (nr, nc) != zombie_pos:
-                            new_dist = abs(nr - zombie_pos[0]) + abs(nc - zombie_pos[1])
-                            old_dist = abs(current_r - zombie_pos[0]) + abs(current_c - zombie_pos[1])
-                            if new_dist > old_dist:
-                                safe_actions.append(act)
-                action = random.choice(safe_actions) if safe_actions else None
-                self.current_path = []
+                if action is not None and next_cell == zombie_pos:
+                    # The path leads right onto the zombie – cancel and pick safe retreat
+                    action = self._safe_retreat_action(current_pos, zombie_pos)
+                    self.current_path = []
 
             if action is not None:
                 self.steps_since_error += 1
