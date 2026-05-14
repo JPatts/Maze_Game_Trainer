@@ -2,7 +2,7 @@ import random
 from collections import deque
 
 class SimHuman:
-    def __init__(self, env, error_prob=0.20, hesitation_prob=0.15):
+    def __init__(self, env, error_prob=0.30, hesitation_prob=0.00):
         self.env = env
         self.rows = env.rows
         self.cols = env.cols
