@@ -6,6 +6,7 @@ from env import Environment, MazeGame
 from sim_human import SimHuman
 from qlearning import QLearningAgent
 from datetime import datetime
+from game_recorder import GameRecorder
 
 def new_session_folder():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -45,6 +46,9 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
         human.reset()
         done = False
         step_count = 0
+
+        from game_recorder import GameRecorder 
+        recorder = GameRecorder()
 
         while not done:
             if render:
@@ -91,10 +95,28 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             action = agent.choose_action(state)
             next_state, reward, done, _ = game.step(action)
 
-            """prev_dist = abs(state['zombie_row'] - state['player_row']) + \
-                        abs(state['zombie_col'] - state['player_col'])
-            new_dist = abs(next_state['zombie_row'] - next_state['player_row']) + \
-                        abs(next_state['zombie_col'] - next_state['player_col'])"""
+            # convert action index to direction string
+            action_dirs = {0: "up", 1: "right", 2: "down", 3: "left"}
+            recorder.record_move(
+                entity="zombie",
+                action=action_dirs[action],
+                from_row=state['zombie_row'],
+                from_col=state['zombie_col'],
+                to_row=next_state['zombie_row'],
+                to_col=next_state['zombie_col'],
+                timestamp=step_count
+            )
+
+            for i, (before, after) in enumerate(zip(
+                state.get('keys_collected', []), 
+                next_state.get('keys_collected', [])
+            )):
+                if not before and after:  # Key was just collected
+                    recorder.record_key_collection(
+                        key_index=i,
+                        row=next_state['key_positions'][i][0],
+                        col=next_state['key_positions'][i][1]
+                    )
             
             dist = abs(state['zombie_row'] - state['player_row']) + abs(state['zombie_col'] - state['player_col'])
             shaped_reward = reward - 0.05
@@ -115,6 +137,19 @@ def run_episodes(agent, num_episodes, render=False, fps=10, window_title="Maze")
             agent.update(state, action, shaped_reward, next_state, done)
             state = next_state
             step_count += 1
+
+        # determine outcome 
+        if game.zombie_pos == game.player_pos:
+            outcome = "zombie"
+        elif game.keys_collected() and game.player_pos == game.door_pos:
+            outcome = "human"
+        else:
+            outcome = "none"
+
+        recorder.record_game_over(outcome)
+        recorder.finalize_experiences()
+
+        session_data = recorder.export_session()
         
         agent.decay_epsilon()
         agent.decay_alpha()
