@@ -4,13 +4,12 @@ import pygame
 
 class Environment:
     def __init__(self, json_path):
-        # Load the JSON file into the instance
         with open(json_path, 'r') as f:
             data = json.load(f)
 
         self.rows = data['rows']
         self.cols = data['cols']
-        self.grid = data['grid']                     # 2D list of cells
+        self.grid = data['grid']                     #
         self.key_positions = data.get('keyPositions', [])
         self.door_position = data.get('doorPositions', None)
         self.zombie_start = data.get('zombieStart', None)
@@ -27,7 +26,7 @@ class Environment:
         for row in range(self.rows):
             for col in range(self.cols):
                 cell = self.grid[row][col]
-                walls = cell['walls']   # [top, right, bottom, left]
+                walls = cell['walls'] 
 
                 x = col * cell_size
                 y = row * cell_size
@@ -50,55 +49,44 @@ class Environment:
         Draw markers for keys, door, player start, zombie start.
         You can customise the colours and shapes.
         """
-        # Helper to convert {row, col} to centre of cell
         def cell_center(pos):
             return (pos['col'] * cell_size + cell_size // 2,
                     pos['row'] * cell_size + cell_size // 2)
 
-        # Keys – small yellow circles
         for key in self.key_positions:
             center = cell_center(key)
             pygame.draw.circle(screen, (255, 255, 0), center, cell_size // 4)
 
-        # Door – brown rectangle
         if self.door_position:
             door = self.door_position
             rect = pygame.Rect(door['col'] * cell_size, door['row'] * cell_size,
                                cell_size, cell_size)
             pygame.draw.rect(screen, (139, 69, 19), rect)
 
-        # Player start – green circle
         if self.player_start:
             center = cell_center(self.player_start)
             pygame.draw.circle(screen, (0, 255, 0), center, cell_size // 3)
 
-        # Zombie start – red circle
         if self.zombie_start:
             center = cell_center(self.zombie_start)
             pygame.draw.circle(screen, (255, 0, 0), center, cell_size // 3)
     
-    # wall logic
     def is_valid_move(self, from_row, from_col, to_row, to_col):
         """Return True if moving from (from_row,from_col) to (to_row,to_col) is legal."""
         if not (0 <= to_row < self.rows and 0 <= to_col < self.cols):
             return False
         walls = self.grid[from_row][from_col]['walls']
-        # moving up   -> check top wall (index 0)
         if to_row == from_row - 1 and to_col == from_col:
             return not walls[0]
-        # moving down -> check bottom wall (index 2)
         if to_row == from_row + 1 and to_col == from_col:
             return not walls[2]
-        # moving left -> check left wall (index 3)
         if to_row == from_row and to_col == from_col - 1:
             return not walls[3]
-        # moving right-> check right wall (index 1)
         if to_row == from_row and to_col == from_col + 1:
             return not walls[1]
         return False
     
     def door_position_as_tuple(self):
-        # returns door pos as (row,col) tuple
         return (self.door_position['row'], self.door_position['col'])
 class MazeGame:
     def __init__(self, env):
@@ -109,11 +97,9 @@ class MazeGame:
         self.rows = env.rows
         self.cols = env.cols
 
-        # starting positions
         self.zombie_start = (env.zombie_start['row'], env.zombie_start['col'])
         self.player_start = (env.player_start['row'], env.player_start['col'])
 
-        # key & door positions
         self.key_positions = [ (k['row'], k['col']) for k in env.key_positions ]
         self.door_pos = (env.door_position['row'], env.door_position['col'])
 
@@ -136,7 +122,6 @@ class MazeGame:
         zombie action: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
         Returns: next_state, reward, done, info_dict
         """
-        # zombie moves
         new_zombie_pos = self._move(self.zombie_pos, zombie_action)
         self.zombie_pos = new_zombie_pos
 
@@ -146,15 +131,12 @@ class MazeGame:
             reward = 100
             return self._get_state(), reward, self.done, {} 
 
-        # human moves
         human_action = self._human_choose_action()
         new_player_pos = self._move(self.player_pos, human_action)
         self.player_pos = new_player_pos
 
-        # check key collect
         self._check_key_collection()
-
-        # check win condition: player has all keys and at door
+        
         if self.player_pos == self.door_pos and all(self.keys_collected):
             self.done = True
             reward = -50.0
